@@ -1,46 +1,57 @@
-#Imports
-import time
-import pygame
-import random
+from os import scandir
+from select import select
+import pygame , random , time
+from datetime import datetime
 
-#Initialzing 
 pygame.init()
 
-#Creating colors
-BLUE  = (0, 0, 255)
-RED   = (255, 0, 0)
-GREEN = (0, 255, 0)
-BLACK = (0, 0, 0)
-WHITE = (255, 255, 255)
-LINE_COLOR = (50, 50, 50)
+# FONTS, text to display
+font = pygame.font.SysFont("Verdana", 60)
+font_small = pygame.font.SysFont("Verdana", 20)
 
-#Other Variables for use in the program
-HEIGHT = 400
-WIDTH = 400
-SCREEN = pygame.display.set_mode((WIDTH, HEIGHT))
-CLOCK = pygame.time.Clock()
-SCREEN.fill(BLACK)
-
-BLOCK_SIZE = 20
-
-#Setting up FPS
+# RESOLUTION, FPS
+RES = WIDTH, HEIGHT = (400,400)
 FPS = 5
 
-#Setting up fonts
-font = pygame.font.SysFont("Verdana", 60)
-font_small = pygame.font.SysFont("Verdana", 15)
+# To draw a grid, snake
+BLACK = (0, 0, 0)
+LINE_COLOR = (50, 50, 50)
+BLOCK_SIZE = 20
+
+# Colors
+RED = (255,0,0)
+WHITE = (255,255,255)
+BLACK = (0,0,0)
+
+# Counters for lvl, score
+score = 0
+lvl = 0
+
+def game_over(screen):
+        gameover = font.render("Game over", True, WHITE)
+        score_text = font_small.render("Score: " + str(score), True, WHITE)
+        lvl_text = font_small.render("level: " + str(lvl), True, WHITE)
+
+        screen.fill(BLACK)
+        screen.blit(gameover, (30,10))
+        screen.blit(lvl_text, (100,85))
+        screen.blit(score_text, (100, 120))
+
+        pygame.display.update()
+
+        time.sleep(3)
+        exit()
 
 class Point:
     def __init__(self, _x, _y):
         self.x = _x
         self.y = _y
 
-
 class Wall:
     def __init__(self, level):
         self.body = []
         f = open("levels/level{}.txt".format(level), "r")
-
+        
         for y in range(0, HEIGHT//BLOCK_SIZE + 1):
             for x in range(0, WIDTH//BLOCK_SIZE + 1):
                 if f.read(1) == '#':
@@ -49,24 +60,72 @@ class Wall:
     def draw(self):
         for point in self.body:
             rect = pygame.Rect(BLOCK_SIZE * point.x, BLOCK_SIZE * point.y, BLOCK_SIZE, BLOCK_SIZE)
-            pygame.draw.rect(SCREEN, (226,135,67), rect)
+            pygame.draw.rect(screen, (226,135,67), rect)
 
 class Food:
     def __init__(self):
-        self.location = Point(random.randint(0, 400)//BLOCK_SIZE, random.randint(0, 400)//BLOCK_SIZE)
+        x = random.randint(0, WIDTH) // BLOCK_SIZE
+        y = random.randint(0, HEIGHT) // BLOCK_SIZE
+        self.location = Point(x, y)
 
     def draw(self):
         point = self.location
         rect = pygame.Rect(BLOCK_SIZE * point.x, BLOCK_SIZE * point.y, BLOCK_SIZE, BLOCK_SIZE)
-        pygame.draw.rect(SCREEN, (0, 255, 0), rect)
+        pygame.draw.rect(screen, (0, 255, 0), rect)
 
+    def reset_position(self): #
+        x = random.randint(0, WIDTH ) // BLOCK_SIZE 
+        y = random.randint(0, HEIGHT) // BLOCK_SIZE 
+        self.location = Point(x, y) 
+
+    def check_wall(self, wall, snake):
+        for point in wall.body:
+            if (point.x == self.location.x) and (point.y == self.location.y) :
+                self.reset_position()
+        
+        for point in snake.body:
+            if (point.x == self.location.x) and (point.y == self.location.y) :
+                self.reset_position()
+
+    def debug_pos(self):
+        print(self.location.x , self.location.y)
+
+class Food2():
+    def __init__(self):
+        x = random.randint(0, WIDTH) // BLOCK_SIZE
+        y = random.randint(0, HEIGHT) // BLOCK_SIZE
+        self.location = Point(x, y)
+
+    def reset_position(self): #
+        x = random.randint(0, WIDTH ) // BLOCK_SIZE 
+        y = random.randint(0, HEIGHT) // BLOCK_SIZE 
+        self.location = Point(x, y) 
+
+    def check_wall(self, wall, snake):
+        for point in wall.body:
+            if (point.x == self.location.x) and (point.y == self.location.y) :
+                self.reset_position()
+        
+        for point in snake.body:
+            if (point.x == self.location.x) and (point.y == self.location.y) :
+                self.reset_position()
+    
+    def disappearing(self):
+        for i in range(0, 5):
+            rect = pygame.Rect(BLOCK_SIZE * self.location.x, BLOCK_SIZE * self.location.y, BLOCK_SIZE, BLOCK_SIZE)
+
+            pygame.draw.rect(screen, (0, 255, 0), rect)
+            pygame.draw.rect(screen, (0, 255, 0, 50), rect)
+
+        self.reset_position()
+        
 
 class Snake:
     def __init__(self):
-        self.body = [Point(10, 11)]
+        self.body = [Point(11, 11)]
         self.dx = 0
         self.dy = 0
-        
+        self.level = 1
 
     def move(self):    
         for i in range(len(self.body) - 1, 0, -1):
@@ -91,65 +150,39 @@ class Snake:
     def draw(self):
         point = self.body[0]
         rect = pygame.Rect(BLOCK_SIZE * point.x, BLOCK_SIZE * point.y, BLOCK_SIZE, BLOCK_SIZE)
-        pygame.draw.rect(SCREEN, (255, 0, 0), rect)
+        pygame.draw.rect(screen, (255, 0, 0), rect)
 
 
         for point in self.body[1:]:
             rect = pygame.Rect(BLOCK_SIZE * point.x, BLOCK_SIZE * point.y, BLOCK_SIZE, BLOCK_SIZE)
-            pygame.draw.rect(SCREEN, (0, 255, 0), rect)
+            pygame.draw.rect(screen, (0, 255, 0), rect)
 
-    def new_level(self):
-        self.body.clear()
-
-    def check_collision(self, food, wall):
-        if self.body[0].x == food.location.x:
-            if self.body[0].y == food.location.y:
-                food.location = Point(random.randint(0, 400)//BLOCK_SIZE, random.randint(0, 400)//BLOCK_SIZE)
+    def check_collision(self, food): # wall
+        global score, FPS # Trabl
+        if (self.body[0].x == food.location.x) and (self.body[0].y == food.location.y):
                 self.body.append(Point(food.location.x, food.location.y))
-        
-        for i in range(len(wall.body)):
-            if self.body[0].x == wall.body[i].x:
-                if self.body[0].y == wall.body[i].y:
-                    time.sleep(1)
-                    game_over()
-            
-            if food.location.x == wall.body[i].x:
-                if food.location.y == wall.body[i].y:
-                    food.location = Point(random.randint(0, 400)//BLOCK_SIZE, random.randint(0, 400)//BLOCK_SIZE)
-
-        for i in range(len(self.body)):
-            if food.location.x == self.body[i].x:
-                if food.location.y == self.body[i].y:
-                    food.location = Point(random.randint(0, 400)//BLOCK_SIZE, random.randint(0, 400)//BLOCK_SIZE)
-
-def game_over():
-    pygame.quit()
+                food.reset_position()
+                score += 1 
+                FPS += 1
+        for point in wall.body: 
+            if (self.body[0].x == point.x) and (self.body[0].y == point.y):
+                game_over(screen)
 
 def main():
-    global FPS
-    
-    #Level counter
-    level_number = 1
+    global snake, wall, screen, lvl, FPS
 
-    #Setting up objects
+    screen = pygame.display.set_mode((WIDTH, HEIGHT))
+    CLOCK = pygame.time.Clock()
+    screen.fill(BLACK)
+
     snake = Snake()
     food = Food()
-    wall = Wall(level_number)
-
-    #Adding a new User event 
-    SPEED_INC = pygame.USEREVENT + 1
-    DISAP = pygame.USEREVENT + 2
-    pygame.time.set_timer(DISAP, 10000)
+    wall = Wall(snake.level)
 
     while True:
-        #Cycles through all events occurring
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
-            if event.type == SPEED_INC:
-                FPS += 2
-            if event.type == DISAP:
-                food.location = Point(random.randint(0, 400)//BLOCK_SIZE, random.randint(0, 400)//BLOCK_SIZE)
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_RIGHT:
                     snake.dx = 1
@@ -163,35 +196,44 @@ def main():
                 if event.key == pygame.K_DOWN:
                     snake.dx = 0
                     snake.dy = 1
-
-        #Moving snake
+        
         snake.move()
-        
-        #Checking snake collisions
-        snake.check_collision(food, wall)
+        snake.check_collision(food)
 
-        #New level logic
-        if len(snake.body) > 10:
-            level_number += 1
-            wall = Wall(level_number)
-            snake.new_level()
+        food.check_wall(wall, snake)
+        # food.debug_pos()
+
+        if len(snake.body) > 4 and len(snake.body) % 2 == 1:
+            lvl += 1
+            temp = lvl % 4
+            wall = Wall(temp)
+
             snake = Snake()
-            pygame.event.post(pygame.event.Event(SPEED_INC))
-            
-        #Score and level
-        SCREEN.fill(BLACK)
-        SCORE = len(snake.body) - 1
-        scores = font_small.render('Score: %d' %SCORE, True, WHITE)
-        SCREEN.blit(scores, (5, 5))
-        level = font_small.render('Level: %d' %level_number, True, WHITE)
-        SCREEN.blit(level, (5, 20))
+
+            FPS += 3
+
+        screen.fill(BLACK)
+        drawGrid()
+
+        Score = font_small.render("Score:" + str(score), True, (255,255,255))
+        Lvl = font_small.render("Lvl: " + str(lvl), True, (255,255,255))
         
-        #Drawing objects
         snake.draw()
         food.draw()
         wall.draw()
+        
+        screen.blit(Score, (10,10))
+        screen.blit(Lvl, (10, 30))
 
         pygame.display.update()
         CLOCK.tick(FPS)
+
+
+def drawGrid():
+    for x in range(0, WIDTH, BLOCK_SIZE):
+        for y in range(0, HEIGHT, BLOCK_SIZE):
+            rect = pygame.Rect(x, y, BLOCK_SIZE, BLOCK_SIZE)
+            pygame.draw.rect(screen, LINE_COLOR, rect, 1)
+
 
 main()

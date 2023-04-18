@@ -7,7 +7,7 @@ pygame.init()
 
 score = 0 
 speed = 10 # speed of enemy
-coins_total = 0 # cnt of coins
+coins_total = 1 # cnt of coins
 
 screen = pygame.display.set_mode(RES)
 clock = pygame.time.Clock()
@@ -63,8 +63,22 @@ class Coin(pygame.sprite.Sprite):
         super().__init__() 
         self.image = pygame.image.load("coin.png")
         self.rect = self.image.get_rect()
-        self.rect.center=(random.randint(0,WIDTH),random.randint(0, HEIGHT)) # rand(x, y)
+        self.rect.center=(random.randint(0,WIDTH),random.randint(100, HEIGHT)) # rand(x, y)
     
+    def output(self,screen):
+        screen.blit(self.image, self.rect)
+
+    def reset(self):
+        self.rect.x = random.randint(0, WIDTH - self.rect.width)
+        self.rect.y = random.randint(0, HEIGHT - self.rect.height)
+
+class Rubin(pygame.sprite.Sprite):
+    def __init__(self):
+        super().__init__()
+        self.image = pygame.image.load("rubin.png")
+        self.rect = self.image.get_rect()
+        self.rect.center=(random.randint(0,WIDTH),random.randint(50, HEIGHT)) # rand(x, y)
+
     def output(self,screen):
         screen.blit(self.image, self.rect)
 
@@ -76,17 +90,20 @@ p1 = Player()
 e1 = Enemy()
 
 c1 = Coin()
-c2 = Coin()
 
+r1 = Rubin()
+
+rubins = pygame.sprite.Group()
+rubins.add(r1)
 coins = pygame.sprite.Group()
-coins.add(c1, c2)
+coins.add(c1)
 enemies = pygame.sprite.Group()
 enemies.add(e1)
 all_sprites = pygame.sprite.Group()
-all_sprites.add(e1, p1, c1, c2)
+all_sprites.add(e1, p1, c1)
 
 INC_SPEED = pygame.USEREVENT + 1 
-pygame.time.set_timer(INC_SPEED, 1000) # per 1 sec => speed++
+pygame.time.set_timer(INC_SPEED, 5000) # per 1 sec => speed++
 
 pygame.mixer.music.load("SWERVE - CITY LIGHT.mp3")
 pygame.mixer.music.play()
@@ -96,7 +113,7 @@ while True:
     clock.tick(60) # FPS
 
     scores = font.render(str(score), True, (0,0,255)) # blue color, passed enemy on screen
-    t_coins = font.render(str(coins_total), True, (255, 215, 0)) # gold color, coins total on screen
+    t_coins = font.render(str(coins_total - 1), True, (255, 215, 0)) # gold color, coins total on screen
     
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -115,14 +132,14 @@ while True:
     p1.output(screen)
 
     c1.output(screen)
-    c2.output(screen)
+    r1.output(screen)
 
     if pygame.sprite.spritecollideany(p1, enemies):
         screen.fill((0,0,0))
         screen.blit(text, (30, 200)) 
         screen.blit(final, (30, 280))
-        screen.blit(scores, (150, 350))
-        screen.blit(t_coins, (230, 350))
+        screen.blit(scores, (100, 350))
+        screen.blit(t_coins, (220, 350))
 
         pygame.display.flip()
 
@@ -139,5 +156,15 @@ while True:
         
         for coin in coins:
             coin.reset()
+    
+    if pygame.sprite.spritecollideany(p1, rubins):
+        coins_total += random.randint(0, 3)
+
+        for rubin in rubins:
+            rubin.reset()
+
+    if coins_total % 7 == 0:
+        speed += 1
+        
 
     pygame.display.flip()
