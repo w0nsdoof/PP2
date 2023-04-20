@@ -157,19 +157,18 @@ class Snake:
             rect = pygame.Rect(BLOCK_SIZE * point.x, BLOCK_SIZE * point.y, BLOCK_SIZE, BLOCK_SIZE)
             pygame.draw.rect(screen, (0, 255, 0), rect)
 
-    def check_collision(self, food): # wall
-        global score, FPS # Trabl
+    def check_collision(self, food, wall): # wall
+        global score
         if (self.body[0].x == food.location.x) and (self.body[0].y == food.location.y):
                 self.body.append(Point(food.location.x, food.location.y))
                 food.reset_position()
                 score += 1 
-                FPS += 1
         for point in wall.body: 
             if (self.body[0].x == point.x) and (self.body[0].y == point.y):
                 game_over(screen)
 
 def main():
-    global snake, wall, screen, lvl, FPS
+    global snake, screen, lvl, FPS, score
 
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
     CLOCK = pygame.time.Clock()
@@ -184,33 +183,32 @@ def main():
             if event.type == pygame.QUIT:
                 pygame.quit()
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_RIGHT:
+                if event.key == pygame.K_d: # RIGHT
                     snake.dx = 1
                     snake.dy = 0
-                if event.key == pygame.K_LEFT:
+                if event.key == pygame.K_a: # LEFT
                     snake.dx = -1
                     snake.dy = 0
-                if event.key == pygame.K_UP:
+                if event.key == pygame.K_w: # UP
                     snake.dx = 0
                     snake.dy = -1
-                if event.key == pygame.K_DOWN:
+                if event.key == pygame.K_s: # DOWN
                     snake.dx = 0
                     snake.dy = 1
         
         snake.move()
-        snake.check_collision(food)
+        snake.check_collision(food, wall)
 
         food.check_wall(wall, snake)
         # food.debug_pos()
 
-        if len(snake.body) > 4 and len(snake.body) % 2 == 1:
+        if len(snake.body) and len(snake.body) % 2 == 1:
             lvl += 1
-            temp = lvl % 4
-            wall = Wall(temp)
+            wall = Wall(lvl % 4)
 
             snake = Snake()
 
-            FPS += 3
+            FPS += 1
 
         screen.fill(BLACK)
         drawGrid()
